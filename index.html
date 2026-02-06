@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>お店おみくじ</title>
+
+    <style>
+        :root {
+            --bg1: #eaf6ff;
+            --bg2: #f6f2ff;
+            --line: rgba(20, 40, 70, .14);
+            --text: #1e2a3a;
+            --muted: rgba(30, 42, 58, .72);
+            --accent: #6aa9ff;
+            --accent2: #8be0ff;
+            --shadow: 0 18px 40px rgba(40, 70, 120, .18);
+            --radius: 18px;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            padding: 16px;
+            min-height: 100svh;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(900px 700px at 15% 10%, rgba(106, 169, 255, .28), transparent 65%),
+                radial-gradient(800px 650px at 85% 20%, rgba(139, 224, 255, .25), transparent 65%),
+                radial-gradient(900px 700px at 30% 95%, rgba(185, 166, 255, .18), transparent 65%),
+                linear-gradient(180deg, var(--bg1), var(--bg2));
+        }
+
+        .wrap {
+            max-width: 760px;
+            margin: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px
+        }
+
+        .card,
+        .hero {
+            background: rgba(255, 255, 255, .72);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 14px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 20px
+        }
+
+        .sub {
+            font-size: 13px;
+            color: var(--muted);
+            margin: 8px 0 0
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px
+        }
+
+        /* ===== ボタン（押した感じ＋リップル） ===== */
+        .btn {
+            position: relative;
+            padding: 12px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .65);
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 10px 22px rgba(40, 70, 120, .10);
+            transition: transform .08s ease, background .15s ease, border-color .15s ease;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn:active {
+            transform: translateY(1px) scale(.99);
+        }
+
+        .btn.selected {
+            border-color: rgba(106, 169, 255, .85);
+            background: linear-gradient(180deg, rgba(106, 169, 255, .22), rgba(139, 224, 255, .12));
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            transform: scale(0);
+            pointer-events: none;
+            background: rgba(106, 169, 255, .28);
+            animation: ripple .55s ease-out;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(3);
+                opacity: 0;
+            }
+        }
+
+        /* ===== ✅ おみくじボタン：中央＆存在感 ===== */
+        .actions {
+            margin-top: 14px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .primary {
+            position: relative;
+            width: min(520px, 100%);
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: none;
+            color: #071a2b;
+            font-weight: 1000;
+            font-size: 16px;
+            letter-spacing: .04em;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            box-shadow: 0 18px 40px rgba(106, 169, 255, .26);
+            transition: transform .12s ease, filter .12s ease;
+            -webkit-tap-highlight-color: transparent;
+            overflow: hidden;
+        }
+
+        .primary:before {
+            content: "";
+            position: absolute;
+            inset: -40%;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, .55), transparent 55%);
+            transform: translateX(-30%) rotate(18deg);
+            opacity: .65;
+            pointer-events: none;
+        }
+
+        .primary:hover {
+            filter: brightness(1.03) saturate(1.05);
+        }
+
+        .primary:active {
+            transform: translateY(1px) scale(.99);
+        }
+
+        .primary:not(:disabled) {
+            animation: breathe 2.4s ease-in-out infinite;
+        }
+
+        @keyframes breathe {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-2px);
+            }
+        }
+
+        .primary:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+            filter: saturate(.7);
+            animation: none;
+        }
+
+        /* 小さなキラッ */
+        .primary .spark {
+            position: absolute;
+            top: 10px;
+            right: 14px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .85);
+            box-shadow:
+                0 0 0 6px rgba(255, 255, 255, .18),
+                0 0 20px rgba(255, 255, 255, .55);
+            opacity: .85;
+        }
+
+        .primary:disabled .spark {
+            opacity: .35;
+        }
+
+        /* ===== 結果 ===== */
+        .result {
+            display: none;
+            margin-top: 12px
+        }
+
+        .result.show {
+            display: block
+        }
+
+        .storeRow {
+            display: flex;
+            gap: 14px;
+            align-items: stretch
+        }
+
+        .storeInfo {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .storeName {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 1000
+        }
+
+        .meta {
+            font-size: 13px;
+            color: var(--muted);
+            margin: 6px 0 0
+        }
+
+        .link {
+            display: inline-block;
+            margin-top: 10px;
+            text-decoration: none;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, .6);
+            border: 1px solid var(--line);
+            font-weight: 900;
+            color: var(--text)
+        }
+
+        /* ===== 右横ワイド進化エリア ===== */
+        .evoWrap {
+            width: 200px;
+            position: relative;
+            flex: 0 0 auto;
+        }
+
+        .eeveeWide {
+            width: 100%;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .82);
+            display: grid;
+            grid-template-rows: 1fr auto;
+            overflow: hidden;
+            box-shadow: 0 14px 30px rgba(40, 70, 120, .18);
+            transform-origin: 50% 90%;
+        }
+
+        .eeveeWideMedia {
+            width: 100%;
+            min-height: 135px;
+            display: block;
+        }
+
+        .eeveeWide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .eeveeWideCaption {
+            padding: 10px 10px 11px;
+            border-top: 1px solid rgba(20, 40, 70, .10);
+            font-weight: 1000;
+            font-size: 12px;
+            color: rgba(30, 42, 58, .86);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .pill {
+            font-size: 11px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(20, 40, 70, .12);
+            background: rgba(255, 255, 255, .60);
+            color: rgba(30, 42, 58, .78);
+            white-space: nowrap;
+        }
+
+        .fallback {
+            min-height: 135px;
+            display: grid;
+            place-items: center;
+            font-weight: 1000;
+            color: rgba(30, 42, 58, .85);
+        }
+
+        .eeveeWide.bounce {
+            animation: eeveeBounce 520ms cubic-bezier(.2, .9, .2, 1) 1;
+        }
+
+        @keyframes eeveeBounce {
+            0% {
+                transform: translateY(0);
+            }
+
+            35% {
+                transform: translateY(-12px);
+            }
+
+            60% {
+                transform: translateY(0);
+            }
+
+            80% {
+                transform: translateY(-5px);
+            }
+
+            100% {
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== 吹き出し ===== */
+        .bubble {
+            position: absolute;
+            right: calc(100% + 10px);
+            top: 10px;
+            width: min(280px, 62vw);
+            background: rgba(255, 255, 255, .92);
+            border: 1px solid rgba(20, 40, 70, .14);
+            border-radius: 16px;
+            box-shadow: 0 14px 30px rgba(40, 70, 120, .14);
+            padding: 10px 12px;
+            opacity: 0;
+            transform: translateY(8px) scale(.98);
+        }
+
+        .bubble.show {
+            animation: bubbleIn 320ms ease-out forwards;
+        }
+
+        @keyframes bubbleIn {
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .bubble:after {
+            content: "";
+            position: absolute;
+            right: -9px;
+            top: 22px;
+            width: 16px;
+            height: 16px;
+            background: rgba(255, 255, 255, .92);
+            border-right: 1px solid rgba(20, 40, 70, .14);
+            border-top: 1px solid rgba(20, 40, 70, .14);
+            transform: rotate(45deg);
+            border-radius: 3px;
+        }
+
+        .bubbleName {
+            font-size: 12px;
+            font-weight: 1000;
+            color: rgba(30, 42, 58, .86);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .bubbleName small {
+            font-weight: 900;
+            color: rgba(30, 42, 58, .55);
+        }
+
+        .bubbleText {
+            font-size: 13px;
+            font-weight: 900;
+            line-height: 1.55;
+            color: rgba(30, 42, 58, .88);
+            min-height: 3.1em;
+            white-space: pre-wrap;
+        }
+
+        /* スマホ */
+        @media (max-width:480px) {
+            .storeRow {
+                flex-direction: column;
+            }
+
+            .evoWrap {
+                width: 100%;
+            }
+
+            .bubble {
+                position: relative;
+                right: auto;
+                top: auto;
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
+            .bubble:after {
+                display: none;
+            }
+        }
+
+        /* ===== 占い〜進化演出オーバーレイ ===== */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            place-items: center;
+            background: radial-gradient(1200px 900px at 50% 35%, rgba(255, 255, 255, .70), rgba(30, 42, 58, .40));
+            z-index: 1000;
+        }
+
+        .overlay.show {
+            display: grid;
+        }
+
+        .panel {
+            width: min(340px, 86vw);
+            background: rgba(255, 255, 255, .78);
+            border: 1px solid rgba(20, 40, 70, .14);
+            border-radius: 22px;
+            box-shadow: 0 26px 60px rgba(40, 70, 120, .25);
+            padding: 14px 14px 16px;
+            text-align: center;
+        }
+
+        .ring {
+            width: 160px;
+            height: 160px;
+            margin: 6px auto 8px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            position: relative;
+        }
+
+        .ring:before {
+            content: "";
+            position: absolute;
+            inset: -6%;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg,
+                    rgba(106, 169, 255, 0),
+                    rgba(106, 169, 255, .9),
+                    rgba(139, 224, 255, .8),
+                    rgba(185, 166, 255, .75),
+                    rgba(255, 204, 126, .75),
+                    rgba(106, 169, 255, 0));
+            mask: radial-gradient(circle, transparent 32%, #000 62%);
+            animation: spin .85s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        .sprite {
+            width: 120px;
+            height: 120px;
+            border-radius: 26px;
+            background: rgba(255, 255, 255, .85);
+            border: 1px solid rgba(20, 40, 70, .14);
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+            animation: wobble .7s linear infinite;
+            position: relative;
+            z-index: 2;
+        }
+
+        @keyframes wobble {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .sprite img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .spriteText {
+            font-weight: 1000;
+            color: rgba(30, 42, 58, .88);
+        }
+
+        .flash {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, .0);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .flash.go {
+            animation: flash 520ms ease-out 1;
+        }
+
+        @keyframes flash {
+            0% {
+                opacity: 0
+            }
+
+            30% {
+                opacity: 1
+            }
+
+            100% {
+                opacity: 0
+            }
+        }
+
+        .ovTitle {
+            font-weight: 1000;
+            letter-spacing: .06em;
+            margin-top: 6px;
+        }
+
+        .ovSub {
+            font-size: 12px;
+            color: rgba(30, 42, 58, .62);
+            margin-top: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header class="hero">
+            <h1>お店おみくじ 🍽️</h1>
+            <p class="sub">駅 → ジャンル → 進化 → 吹き出しで紹介（結果は引くまで秘密）</p>
+        </header>
+
+        <main class="card">
+            <p><b>① 駅</b></p>
+            <div class="grid" id="stationGrid"></div>
+
+            <p style="margin-top:14px"><b>② ジャンル</b></p>
+            <div class="grid" id="genreGrid"></div>
+
+            <div class="actions">
+                <button class="primary" id="drawBtn" disabled>
+                    おみくじを引く 🎲
+                    <span class="spark" aria-hidden="true"></span>
+                </button>
+            </div>
+
+            <div class="result" id="resultBox">
+                <div class="storeRow">
+                    <div class="storeInfo">
+                        <p class="storeName" id="storeName"></p>
+                        <p class="meta" id="storeMeta"></p>
+                        <a class="link" id="storeLink" target="_blank" rel="noopener noreferrer">お店を見る ↗</a>
+                    </div>
+                    <div id="evoArea"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 占い〜進化オーバーレイ -->
+    <div class="overlay" id="overlay" aria-hidden="true">
+        <div class="panel">
+            <div class="ring">
+                <div class="sprite" id="spriteBox">
+                    <img id="spriteImg" src="eevee.png" alt="イーブイ">
+                    <div id="spriteFallback" class="spriteText" style="display:none;">イーブイ</div>
+                </div>
+                <div class="flash" id="flash"></div>
+            </div>
+            <div class="ovTitle" id="ovTitle">占い中…</div>
+            <div class="ovSub" id="ovSub">イーブイがぐるぐる回ってます</div>
+        </div>
+    </div>
+
+    <script>
+        const STATIONS = ["東京駅", "新橋駅"];
+        const GENRES = ["餃子", "魚", "肉", "チェーン"];
+        const map = q => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+
+        // データ（テング酒場もGoogleマップ）
+        const DATA = {
+            "東京駅": {
+                "魚": [{ name: "オカモ倶楽部 丸の内店", url: map("オカモ倶楽部 丸の内店") }],
+                "チェーン": [{ name: "テング酒場（八重洲店）", url: map("テング酒場 東京駅") }],
+                "餃子": [{ name: "WUMEI東京駅店", url: map("WUMEI東京駅店") }],
+                "肉": [{ name: "炭火焼ホルモンぐう 八重洲本店", url: map("炭火焼ホルモンぐう 八重洲本店") }]
+            },
+            "新橋駅": {
+                "魚": [{ name: "魚豪商 コダマ", url: map("魚豪商 コダマ 新橋") }],
+                "チェーン": [{ name: "魚えもん新橋店", url: map("魚えもん新橋店") }],
+                "餃子": [{ name: "焼き小籠包マニア", url: map("焼き小籠包マニア") }],
+                "肉": [{ name: "やきにく 龍の巣 新橋店", url: map("やきにく 龍の巣 新橋店") }]
+            }
+        };
+
+        // キャラ
+        const EVO = {
+            vaporeon: { label: "シャワーズ", file: "vaporeon.png", tone: "💧" },
+            jolteon: { label: "サンダース", file: "jolteon.png", tone: "⚡" },
+            flareon: { label: "ブースター", file: "flareon.png", tone: "🔥" },
+            espeon: { label: "エーフィ", file: "espeon.png", tone: "🔮" }
+        };
+
+        // 対応：シャワーズ=魚 / ブースター=肉
+        const GENRE_TO_EVO = {
+            "魚": "vaporeon",
+            "肉": "flareon",
+            "餃子": "jolteon",
+            "チェーン": "espeon"
+        };
+
+        let station = null, genre = null;
+
+        const sg = document.getElementById("stationGrid");
+        const gg = document.getElementById("genreGrid");
+        const drawBtn = document.getElementById("drawBtn");
+
+        const overlay = document.getElementById("overlay");
+        const spriteImg = document.getElementById("spriteImg");
+        const spriteFallback = document.getElementById("spriteFallback");
+        const flash = document.getElementById("flash");
+        const ovTitle = document.getElementById("ovTitle");
+        const ovSub = document.getElementById("ovSub");
+
+        spriteImg.addEventListener("error", () => {
+            spriteImg.style.display = "none";
+            spriteFallback.style.display = "block";
+        });
+
+        // リップル
+        function ripple(e, btn) {
+            const rect = btn.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            const r = document.createElement("span");
+            r.className = "ripple";
+            r.style.width = r.style.height = size + "px";
+            r.style.left = x + "px";
+            r.style.top = y + "px";
+            btn.appendChild(r);
+            r.addEventListener("animationend", () => r.remove(), { once: true });
+        }
+        function makeBtn(label, onClick) {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "btn";
+            b.textContent = label;
+            b.addEventListener("click", (e) => { ripple(e, b); onClick(b); });
+            return b;
+        }
+        function setSelected(container, btn) {
+            [...container.children].forEach(x => x.classList.remove("selected"));
+            btn.classList.add("selected");
+        }
+        function render() {
+            sg.innerHTML = ""; gg.innerHTML = "";
+            STATIONS.forEach(s => {
+                sg.appendChild(makeBtn(s, (btn) => {
+                    station = s; genre = null;
+                    setSelected(sg, btn);
+                    [...gg.children].forEach(x => x.classList.remove("selected"));
+                    document.getElementById("resultBox").classList.remove("show");
+                    update();
+                }));
+            });
+            GENRES.forEach(g => {
+                gg.appendChild(makeBtn(g, (btn) => {
+                    if (!station) return alert("先に駅を選んでね！");
+                    genre = g;
+                    setSelected(gg, btn);
+                    document.getElementById("resultBox").classList.remove("show");
+                    update();
+                }));
+            });
+        }
+        function update() { drawBtn.disabled = !(station && genre); }
+
+        function pickOne() {
+            const list = DATA?.[station]?.[genre] || [];
+            return list[Math.floor(Math.random() * list.length)];
+        }
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+        async function playEvolution(evoKey) {
+            const evo = EVO[evoKey];
+
+            spriteImg.style.display = "block";
+            spriteFallback.style.display = "none";
+            spriteImg.onerror = () => {
+                spriteImg.style.display = "none";
+                spriteFallback.style.display = "block";
+                spriteFallback.textContent = "イーブイ";
+            };
+            spriteImg.src = "eevee.png";
+
+            ovTitle.textContent = "占い中…";
+            ovSub.textContent = "イーブイがぐるぐる回ってます";
+            overlay.classList.add("show");
+            await sleep(900);
+
+            flash.classList.remove("go");
+            void flash.offsetWidth;
+            flash.classList.add("go");
+
+            ovTitle.textContent = "進化…！";
+            ovSub.textContent = `${evo.tone} ${evo.label}になった！`;
+
+            spriteImg.onerror = () => {
+                spriteImg.style.display = "none";
+                spriteFallback.style.display = "block";
+                spriteFallback.textContent = evo.label;
+            };
+            spriteImg.style.display = "block";
+            spriteFallback.style.display = "none";
+            spriteImg.src = evo.file;
+
+            await sleep(650);
+            overlay.classList.remove("show");
+            await sleep(80);
+        }
+
+        async function typeText(el, text, speed = 20) {
+            el.textContent = "";
+            for (let i = 0; i < text.length; i++) {
+                el.textContent += text[i];
+                await sleep(speed);
+            }
+        }
+
+        function makeSpeech(evoKey, storeName) {
+            const evo = EVO[evoKey];
+            const by = {
+                vaporeon: [
+                    `${evo.tone} 今日は魚の気分！\n「${storeName}」に行こ〜！`,
+                    `${evo.tone} 海の呼び声…。\n「${storeName}」で決まり！`
+                ],
+                flareon: [
+                    `${evo.tone} 肉は正義！\n今日は「${storeName}」へ！`,
+                    `${evo.tone} ガツンと行くなら肉！\n「${storeName}」いこ！`
+                ],
+                jolteon: [
+                    `${evo.tone} 餃子ってテンション上がる！\n「${storeName}」行こう！`,
+                    `${evo.tone} パリッとジュワッと！\n「${storeName}」で決まり！`
+                ],
+                espeon: [
+                    `${evo.tone} 迷ったら安定。\n「${storeName}」が見える…！`,
+                    `${evo.tone} 今日の最適解。\n「${storeName}」へ！`
+                ]
+            };
+            const pool = by[evoKey] || [`今日の店は「${storeName}」！`];
+            return pool[Math.floor(Math.random() * pool.length)];
+        }
+
+        function renderEvoWithBubble(evoKey, storeName) {
+            const evo = EVO[evoKey];
+            const area = document.getElementById("evoArea");
+
+            area.innerHTML = `
+    <div class="evoWrap">
+      <div class="bubble" id="bubble">
+        <div class="bubbleName">
+          <span>${evo.label} が紹介</span>
+          <small>おすすめ！</small>
+        </div>
+        <div class="bubbleText" id="bubbleText"></div>
+      </div>
+
+      <div class="eeveeWide" id="eeveeWide">
+        <div class="eeveeWideMedia">
+          <img src="${evo.file}" alt="${evo.label}"
+               onerror="this.outerHTML='<div class=\\'fallback\\'>${evo.label}</div>'">
+        </div>
+        <div class="eeveeWideCaption">
+          <span>${evo.label}</span>
+          <span class="pill">本日の相棒</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+            const wide = document.getElementById("eeveeWide");
+            requestAnimationFrame(() => {
+                wide.classList.add("bounce");
+                wide.addEventListener("animationend", () => wide.classList.remove("bounce"), { once: true });
+            });
+
+            const bubble = document.getElementById("bubble");
+            const bubbleText = document.getElementById("bubbleText");
+            const speech = makeSpeech(evoKey, storeName);
+
+            requestAnimationFrame(async () => {
+                bubble.classList.add("show");
+                await typeText(bubbleText, speech, 20);
+            });
+        }
+
+        drawBtn.addEventListener("click", async () => {
+            if (!(station && genre)) return;
+
+            const chosen = pickOne();
+            const evoKey = GENRE_TO_EVO[genre] || "espeon";
+
+            await playEvolution(evoKey);
+
+            document.getElementById("storeName").textContent = chosen.name;
+            document.getElementById("storeMeta").textContent = `${station} / ${genre}`;
+            document.getElementById("storeLink").href = chosen.url;
+
+            renderEvoWithBubble(evoKey, chosen.name);
+            document.getElementById("resultBox").classList.add("show");
+        });
+
+        render();
+        update();
+    </script>
+</body>
+
+</html>
